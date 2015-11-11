@@ -42,6 +42,28 @@ public class LotRGameState {
        this.config=config;
        sauronPosition = (int)config.get("sauronPosition");
        locationsAmount = ((BasicDBList)(config.get("locations"))).size();
+       
+       //cargar los valores de cada variable para los play5r
+       if (config.get("shieldTokens")!=null){
+           for (String key : players.keySet()){
+               players.get(key).setShields((int)config.get("shieldTokens"));
+           }
+       }
+       if (config.get("lifeTokens")!=null){
+           for (String key : players.keySet()){
+               players.get(key).setLifeTokens((int)config.get("lifeTokens"));
+           }
+       }
+       if (config.get("ringTokens")!=null){
+           for (String key : players.keySet()){
+               players.get(key).setRingTokens((int)config.get("ringTokens"));
+           }
+       }
+       if (config.get("sunTokens")!=null){
+           for (String key : players.keySet()){
+               players.get(key).setSunTokens((int)config.get("sunTokens"));
+           }
+       }
     }
 
     @Override
