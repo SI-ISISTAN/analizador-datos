@@ -79,6 +79,8 @@ public class LotRModel extends Model{
     }
     
     public void evaluateGame(GameSchema g){
+        //por errores en el guardado de usuarios
+        boolean userError=false;
         //chequea si el juego es digno de evaluacion
         LotRGame game = (LotRGame)g;
         if (this.isAnalyzable(game)){
@@ -91,94 +93,114 @@ public class LotRModel extends Model{
             //instancio el estado de juego con la configuracion inicial del juego
             gameState = new LotRGameState();
             for(DBObject p : playersArr) {
-              partialProfiles.put((String)p.get("alias"), new SymlogProfile());
-              userIDs.put((String)p.get("alias"), (String)p.get("userID"));
-              gameState.addPlayer((String)p.get("alias"));
+                if (p.get("alias")!=null && p.get("userID")!=null){
+                    partialProfiles.put((String)p.get("alias"), new SymlogProfile());
+                    userIDs.put((String)p.get("alias"), (String)p.get("userID"));
+                    gameState.addPlayer((String)p.get("alias"));
+                }
+                else{
+                    userError=true;
+                }
             }
-            
-            if (game.get("configName")!=null){
-                DBObject config = database.getConfig((String)game.get("configName"));
-                if (config!=null){
-                    gameState.loadInitialState(config);
-                    //si hay datos sobre el gamestate
-                    window.consolePrint("Analizo nueva partida. Game ID: "+game.get("gameID"));
-                    window.consolePrint("---------------------------------------------");
-                    //evalua cada accion de juego
-                    ArrayList<GameActionSchema> gameActions = game.getGameActions();
-                    int i=0;
-                    while (i<gameActions.size()){
-                        LotRGameAction action = (LotRGameAction) gameActions.get(i);
-                        //updatear el gamestate
-                        gameState.update(action);
-                        //analizar la accion si es relevante
-                        if (this.isActionRelevant(action)){
-                            //evaluar acción   
-                            String actionName = (String) action.get("action");
-                            JSONObject policy = evaluationPolicy.get(actionName);
-                            //si la accion es formato SimpleChoice y existe una acción próxima
-                            if ("SimpleChoice".equals(policy.get("format")) && i+1<gameActions.size()){
-                                this.evaluateSimpleChoice(action, (LotRGameAction) gameActions.get(i+1), policy, partialProfiles.get((String)action.get("player")), (String)action.get("player"));
-                            }
-                            else if ("SpontaneousChoice".equals(policy.get("format")) && i+1<gameActions.size()){
-                                 this.evaluateSpontaneousChoice(action, policy, partialProfiles.get((String)action.get("player")), (String)action.get("player"));
-                            }
-                            else if ("PolledChoice".equals(policy.get("format")) && i+1<gameActions.size()){
-                                 this.evaluatePolledChoice(action, policy, partialProfiles);
-                            }
-                        }
-                        i++;
+            if (!userError){
+                if (game.get("configName")!=null || game.get("configObj")!=null){
+                    DBObject config = null;
+                    //primero intento cargar el configobj
+                    if (game.get("configObj")!=null){
+                        config = (DBObject)game.get("configObj");
                     }
-                    //recupero el chat correspondiente a la partida
-                    DBObject chat = database.getChatForGame((String)game.get("gameID"));
-                    if (chat!=null){
-                        //si existe, busco los posibles conflictos y llevo la data a los partial profiles
-                        Hashtable<String, LotRIPAConflictTable> tab = this.createIPATables(playersArr);
-                        BasicDBList msgs = (BasicDBList)chat.get("chats");
-
-                        //cargo los datos de IPA provistos por el modelo JSON 
-                        if (msgs.size()>0 && msgs.size()> (long)IPAPolicy.get("minimumInteractionsTotal")){
-                            int chatsAmount = msgs.size();
-                            for (Object o : msgs){
-                                DBObject msg = (DBObject)o;
-                                String alias = (String)msg.get("from");
-                                if (msg.get("IPA")!=null){
-                                    //posible bad casting
-
-                                    tab.get(alias).addInteractionToConflict((int)msg.get("IPA"));               
+                    else{
+                        //si no funciona el config name
+                        config = database.getConfig((String)game.get("configName"));
+                    }
+                    if (config!=null){
+                        gameState.loadInitialState(config);
+                        //si hay datos sobre el gamestate
+                        window.consolePrint("Analizo nueva partida. Game ID: "+game.get("gameID"));
+                        window.consolePrint("---------------------------------------------");
+                        //evalua cada accion de juego
+                        ArrayList<GameActionSchema> gameActions = game.getGameActions();
+                        int i=0;
+                        while (i<gameActions.size()){
+                            LotRGameAction action = (LotRGameAction) gameActions.get(i);
+                            //updatear el gamestate
+                            gameState.update(action);
+                            //analizar la accion si es relevante
+                            if (this.isActionRelevant(action)){
+                                //evaluar acción   
+                                String actionName = (String) action.get("action");
+                                JSONObject policy = evaluationPolicy.get(actionName);
+                                //si la accion es formato SimpleChoice y existe una acción próxima
+                                if ("SimpleChoice".equals(policy.get("format")) && i+1<gameActions.size()){
+                                    this.evaluateSimpleChoice(action, (LotRGameAction) gameActions.get(i+1), policy, partialProfiles.get((String)action.get("player")), (String)action.get("player"));
                                 }
-                                tab.get(alias).addInteraction();
+                                else if ("SpontaneousChoice".equals(policy.get("format")) && i+1<gameActions.size()){
+                                     this.evaluateSpontaneousChoice(action, policy, partialProfiles.get((String)action.get("player")), (String)action.get("player"));
+                                }
+                                else if ("PolledChoice".equals(policy.get("format")) && i+1<gameActions.size()){
+                                     this.evaluatePolledChoice(action, policy, partialProfiles);
+                                }
                             }
-                            //analisis de chats, delegado a table
-                            for (String key : tab.keySet()) {
-                                    int conflicts = tab.get(key).analyzeChatsForUser(partialProfiles.get(key), IPAPolicy, tab.size(), msgs.size());
-                                    window.consolePrint("\nSe han hallado "+conflicts+ " conflictos IPA para el usuario "+key);
-                            }
+                            i++;
                         }
-                        else{
-                            window.consolePrint("\nNo se han encontrado chats para esta partida, o su número es insuficiente para proveer datos significativos. \n");
-                        }
-                    }
+                        //recupero el chat correspondiente a la partida
+                        DBObject chat = database.getChatForGame((String)game.get("gameID"));
+                        if (chat!=null){
+                            //si existe, busco los posibles conflictos y llevo la data a los partial profiles
+                            Hashtable<String, LotRIPAConflictTable> tab = this.createIPATables(playersArr);
+                            BasicDBList msgs = (BasicDBList)chat.get("chats");
 
-                    
-                    //guardo cada perfil parcial en la base de datos, en la coleccion de usuarios
-                    this.savePartialProfiles(partialProfiles, userIDs);
-                    //guardo en el campo de la partida en la base de datos que ya analice la partida
-                    database.setAnalyzedGame((String)game.get("gameID"), modelName);
-                    //imprimo resultado
-                    
-                    for (String key : partialProfiles.keySet()) {
-                        window.consolePrint(key);
-                        window.consolePrint(partialProfiles.get(key).toString());
+                            //cargo los datos de IPA provistos por el modelo JSON 
+                            if (msgs.size()>0 && msgs.size()> (long)IPAPolicy.get("minimumInteractionsTotal")){
+                                int chatsAmount = msgs.size();
+                                for (Object o : msgs){
+                                    DBObject msg = (DBObject)o;
+                                    String alias = (String)msg.get("from");
+                                    if (msg.get("IPA")!=null){
+                                        //posible bad casting
+
+                                        tab.get(alias).addInteractionToConflict((int)msg.get("IPA"));               
+                                    }
+                                    tab.get(alias).addInteraction();
+                                }
+                                //analisis de chats, delegado a table
+                                for (String key : tab.keySet()) {
+                                        int conflicts = tab.get(key).analyzeChatsForUser(partialProfiles.get(key), IPAPolicy, tab.size(), msgs.size());
+                                        window.consolePrint("\nSe han hallado "+conflicts+ " conflictos IPA para el usuario "+key);
+                                }
+                            }
+                            else{
+                                window.consolePrint("\nNo se han encontrado chats para esta partida, o su número es insuficiente para proveer datos significativos. \n");
+                            }
+                        }
+
+                        
+                        //guardo cada perfil parcial en la base de datos, en la coleccion de usuarios
+                        this.savePartialProfiles(partialProfiles, userIDs);
+                        //guardo en el campo de la partida en la base de datos que ya analice la partida
+                        database.setAnalyzedGame((String)game.get("gameID"), modelName);
+                        //imprimo resultado
+
+                        for (String key : partialProfiles.keySet()) {
+                            window.consolePrint(key);
+                            window.consolePrint(partialProfiles.get(key).toString());
+                        }
+                        window.consolePrint("\nSe ha guardado en la base de datos el análisis.");
+                        window.consolePrint("---------------------------------------------");
+                                
                     }
-                    window.consolePrint("\nSe ha guardado en la base de datos el análisis.");
+                }
+                else{
+                    //no hay data sobre la configuracion inicial
+                    window.consolePrint("\nNo hay datos sobre la configuracion inicial de la partida. Esto impide la reconstrucción del contexto. No se ha analizado la partida.");
                     window.consolePrint("---------------------------------------------");
                 }
             }
             else{
                 //no hay data sobre la configuracion inicial
-                window.consolePrint("No hay datos sobre la configuracion inicial de la partida. Esto impide la reconstrucción del contexto. No se ha analizado la partida.");
+                    window.consolePrint("\nLos datos de usuarios de la partida están corrompidos. No se ha analizado la partida.");
+                    window.consolePrint("---------------------------------------------");
             }
-            
         }
     };
     
@@ -466,11 +488,31 @@ public class LotRModel extends Model{
                 }
                 if (symlogName!=null){
                     if (modelName.equals(symlogName)){
+                        double up_down = 0;
+                        double positive_negative =0;
+                        double forward_backward =0;
                         //Construyo el perfil agregando las interacciones que tengo
-                        //Revisar esta pija
-                        double up_down = (double)symlog.get("up_down");
-                        double positive_negative = (double)symlog.get("positive_negative");
-                        double forward_backward = (double)symlog.get("forward_backward");
+                        if (symlog.get("up_down") instanceof Integer){
+                            Integer inter = (Integer)symlog.get("up_down");
+                            up_down= (double)inter;
+                        }
+                        else{
+                            up_down = (double)symlog.get("up_down");
+                        }
+                        if (symlog.get("positive_negative") instanceof Integer){
+                            Integer inter = (Integer)symlog.get("positive_negative");
+                            positive_negative= (double)inter;
+                        }
+                        else{
+                            positive_negative = (double)symlog.get("positive_negative");
+                        }
+                        if (symlog.get("forward_backward") instanceof Integer){
+                            Integer inter = (Integer)symlog.get("forward_backward");
+                            forward_backward = (double)inter;
+                        }
+                        else{
+                            forward_backward = (double)symlog.get("forward_backward");
+                        }
                         //aparentemente parsea al tipo que mas le parece
                         long interactions=0;
                         if (symlog.get("interactions") instanceof Integer){
