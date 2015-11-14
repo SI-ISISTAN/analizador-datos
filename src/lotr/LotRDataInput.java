@@ -118,6 +118,25 @@ public class LotRDataInput extends DataInput{
         
     }
     
+    public void setProfileStats(String gameID, String modelName){
+        
+        //hay que escribir la rutina para guarar los tats en la DB y estamos
+        
+        DBCollection gamesCollection = db.getCollection("games");
+        
+        BasicDBObject newDocument = new BasicDBObject();
+        BasicDBObject newDocument2 = new BasicDBObject();
+        newDocument2.append("analyzed", true);
+        newDocument2.append("model", modelName);
+	newDocument.append("$set", newDocument2);
+			
+	BasicDBObject searchQuery = new BasicDBObject().append("gameID", gameID);
+
+	gamesCollection.update(searchQuery, newDocument);
+        
+        
+    }
+    
     public void resetAnalysis(String modelName){
         DBCollection gamesCollection = db.getCollection("games");
         
@@ -193,6 +212,16 @@ public class LotRDataInput extends DataInput{
         BasicDBObject query = new BasicDBObject("local",subQuery);
         DBObject user = usersCollection.findOne(query);
         usersCollection.update(user, new BasicDBObject("$set" , new BasicDBObject("symlog",newProfile) ));
+    }
+    
+    public void updateStats(String userID, BasicDBObject newProfile){
+        DBCollection usersCollection = db.getCollection("users");
+        BasicDBObject subQuery = new BasicDBObject("userID",userID);
+        BasicDBObject query = new BasicDBObject("local",subQuery);
+        DBObject user = usersCollection.findOne(query);
+        if (user!=null){
+            usersCollection.update(user, new BasicDBObject("$set" , new BasicDBObject("stats",newProfile) ));
+        }
     }
     
     public DBObject getChatForGame(String gameID){

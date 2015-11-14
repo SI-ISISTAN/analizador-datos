@@ -5,7 +5,9 @@
  */
 package interfaz;
 
+import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
 import data.analyzer.UserSchema;
 import data.analyzer.DataAnalyzer;
 import data.analyzer.GameSchema;
@@ -21,6 +23,7 @@ import lotr.LotRModel;
 import data.analyzer.DataInput;
 import data.analyzer.InvalidInputException;
 import data.analyzer.Model;
+import data.analyzer.SymlogProfile;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.net.MalformedURLException;
@@ -35,8 +38,12 @@ import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import lotr.LotRGame;
+import lotr.LotRIPAConflictTable;
 import lotr.SocketIOConnection;
+import lotr.StatProfile;
 import org.json.JSONObject;
+import org.json.simple.JSONArray;
 /**
  *
  * @author matias
@@ -132,6 +139,7 @@ public class MainWindow extends javax.swing.JFrame {
         jLabel1 = new javax.swing.JLabel();
         jButton4 = new javax.swing.JButton();
         metricsButton = new javax.swing.JButton();
+        statsButton = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jLabel5 = new javax.swing.JLabel();
         chatList = new javax.swing.JComboBox();
@@ -228,11 +236,19 @@ public class MainWindow extends javax.swing.JFrame {
             }
         });
 
-        metricsButton.setText("Calcular metricas");
+        metricsButton.setText("Métricas de análisis");
         metricsButton.setEnabled(false);
         metricsButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 metricsButtonActionPerformed(evt);
+            }
+        });
+
+        statsButton.setText("Generar estadísticas");
+        statsButton.setEnabled(false);
+        statsButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                statsButtonActionPerformed(evt);
             }
         });
 
@@ -244,28 +260,32 @@ public class MainWindow extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(metricsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 191, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(29, 29, 29))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(cabezaButton, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(resetAnalysisButton, javax.swing.GroupLayout.PREFERRED_SIZE, 191, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(loadJSONButton, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(getGamesButton, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 162, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(modelOptions, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGap(0, 0, Short.MAX_VALUE)))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel1)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 434, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(349, 349, 349))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(metricsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 191, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(128, 128, 128)
-                        .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 189, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                                    .addComponent(modelOptions, javax.swing.GroupLayout.PREFERRED_SIZE, 196, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                        .addComponent(statsButton, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(resetAnalysisButton, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 191, Short.MAX_VALUE)))
+                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel1)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 434, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(349, 349, 349))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(350, 350, 350)
+                .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 189, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -273,7 +293,7 @@ public class MainWindow extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(jLabel1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(jLabel3)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -286,16 +306,19 @@ public class MainWindow extends javax.swing.JFrame {
                         .addComponent(getGamesButton)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(cabezaButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGap(26, 26, 26)
                         .addComponent(jLabel4)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(resetAnalysisButton))
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 285, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton4)
-                    .addComponent(metricsButton))
-                .addContainerGap(20, Short.MAX_VALUE))
+                        .addComponent(resetAnalysisButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(statsButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(metricsButton)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(jScrollPane1))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jButton4)
+                .addGap(6, 6, 6))
         );
 
         tabbedPane.addTab("Análisis de partidas", jPanel1);
@@ -437,7 +460,7 @@ public class MainWindow extends javax.swing.JFrame {
                             .addComponent(nextButton)
                             .addComponent(prevButton)))
                     .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 242, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(42, Short.MAX_VALUE))
+                .addContainerGap(80, Short.MAX_VALUE))
         );
 
         tabbedPane.addTab("Análisis de chats", jPanel2);
@@ -581,8 +604,8 @@ public class MainWindow extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(jButton3)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(tabbedPane, javax.swing.GroupLayout.PREFERRED_SIZE, 420, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(21, Short.MAX_VALUE))
+                .addComponent(tabbedPane)
+                .addContainerGap())
         );
 
         pack();
@@ -806,13 +829,83 @@ public class MainWindow extends javax.swing.JFrame {
             sendArea.setText("");
        }
     }//GEN-LAST:event_sendAreaKeyPressed
+
+    private void statsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_statsButtonActionPerformed
+        Hashtable<String, StatProfile> users =  new Hashtable<>();
+        LotRDataInput db = (LotRDataInput)database;
+        ArrayList<GameSchema> games = database.getGames();
+        for (GameSchema g : games){
+            Hashtable<String, String> aliases = new Hashtable<>();
+            LotRGame game = (LotRGame)g;
+            BasicDBList players = (BasicDBList) game.get("players");
+            DBObject[] playersArr = players.toArray(new DBObject[0]);
+            boolean userError=false;
+            for(DBObject p : playersArr) {
+                if (p.get("alias")!=null && p.get("userID")!=null){
+                    aliases.put((String)p.get("alias"), (String)p.get("userID"));
+                    if (!users.containsKey((String)p.get("userID"))){
+                        users.put((String)p.get("userID"), new StatProfile());
+                    }
+                }
+                else{
+                    userError=true;
+                }
+            }
+            //si no hubo usuarios sin data en la partida
+            if (!userError){
+                //cargo los datos de la partida
+                for (String id : aliases.values()){
+                    users.get(id).addGame();
+                    //si gane agrego al won
+                    if (game.get("result")!=null){
+                        if ((boolean)((DBObject)game.get("result")).get("victory") == true){
+                            users.get(id).addWon();
+                        }
+                    }
+                    //agrego los puntos
+                    //posible horror de casting
+                    if (game.get("result")!=null){
+                        users.get(id).addPoints((Integer)((DBObject)game.get("result")).get("score"));
+                    }
+                }
+                //cargo los chats de ese usuario
+                //recupero el chat correspondiente a la partida
+                 DBObject chat = db.getChatForGame((String)game.get("gameID"));
+                if (chat!=null){
+                            BasicDBList msgs = (BasicDBList)chat.get("chats");
+                            for (Object o : msgs){
+                                    DBObject msg = (DBObject)o;
+                                    String alias = (String)msg.get("from");
+                                    users.get(aliases.get(alias)).addChat();
+                                }
+                 }
+            }       
+        }
+        for (String p:users.keySet()){
+            this.consolePrint("\nUserID: "+p);
+            this.consolePrint("Partidas jugadas: "+users.get(p).getGames());
+            this.consolePrint("Partidas ganadas: "+users.get(p).getWon());
+            this.consolePrint("Procentaje de victorias: "+ (double)users.get(p).getWon()/(double)users.get(p).getGames());
+            this.consolePrint("Mensajes de chat: "+users.get(p).getChats());
+            this.consolePrint("---------------------------------------------");
+            
+            //persistir los stats de cada jugador
+            BasicDBObject document = new BasicDBObject();
+            document.put("games", users.get(p).getGames());
+            document.put("won", users.get(p).getWon());
+            document.put("chats", users.get(p).getChats()); 
+            db.updateStats(p, document);
+            
+        }
+        
+    }//GEN-LAST:event_statsButtonActionPerformed
                  
     
     public void enableModelLoad(){
         modelOptions.setEnabled(true);
         loadJSONButton.setEnabled(true);
         tabbedPane.setEnabledAt(1, true);
-        
+        statsButton.setEnabled(true);
         //cargo los chats de la db
         chatList.setModel(new DefaultComboBoxModel(((LotRDataInput)database).getChats().toArray()));
         DefaultListModel listmodel = new DefaultListModel();
@@ -918,6 +1011,7 @@ public class MainWindow extends javax.swing.JFrame {
     private javax.swing.JTextField sendArea;
     private javax.swing.JButton socketConnectButton;
     private javax.swing.JButton socketDisconnectButton;
+    private javax.swing.JButton statsButton;
     private javax.swing.JTabbedPane tabbedPane;
     private javax.swing.JTextField urlArea;
     // End of variables declaration//GEN-END:variables
