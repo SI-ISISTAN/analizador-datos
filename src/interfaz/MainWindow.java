@@ -886,6 +886,8 @@ public class MainWindow extends javax.swing.JFrame {
             this.consolePrint("Partidas jugadas: "+users.get(p).getGames());
             this.consolePrint("Partidas ganadas: "+users.get(p).getWon());
             this.consolePrint("Procentaje de victorias: "+ (double)users.get(p).getWon()/(double)users.get(p).getGames());
+            this.consolePrint("Puntos obtenidos: "+users.get(p).getPoints());
+            this.consolePrint("Promedio de puntos por partida: "+(double)users.get(p).getPoints()/(double)users.get(p).getGames());
             this.consolePrint("Mensajes de chat: "+users.get(p).getChats());
             this.consolePrint("---------------------------------------------");
             
@@ -893,6 +895,7 @@ public class MainWindow extends javax.swing.JFrame {
             BasicDBObject document = new BasicDBObject();
             document.put("games", users.get(p).getGames());
             document.put("won", users.get(p).getWon());
+            document.put("points", users.get(p).getPoints());
             document.put("chats", users.get(p).getChats()); 
             db.updateStats(p, document);
             
