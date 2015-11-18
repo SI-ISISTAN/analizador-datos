@@ -21,6 +21,7 @@ import javax.swing.text.Document;
 import lotr.LotRDataInput;
 import lotr.LotRModel;
 import data.analyzer.DataInput;
+import data.analyzer.GameActionSchema;
 import data.analyzer.InvalidInputException;
 import data.analyzer.Model;
 import data.analyzer.SymlogProfile;
@@ -39,6 +40,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import lotr.LotRGame;
+import lotr.LotRGameAction;
 import lotr.LotRIPAConflictTable;
 import lotr.SocketIOConnection;
 import lotr.StatProfile;
@@ -854,19 +856,73 @@ public class MainWindow extends javax.swing.JFrame {
             //si no hubo usuarios sin data en la partida
             if (!userError){
                 //cargo los datos de la partida
-                for (String id : aliases.values()){
-                    users.get(id).addGame();
+                boolean analyzeDeaths=false;
+                for (String alias : aliases.keySet()){
+                    users.get(aliases.get(alias)).addGame();
                     //si gane agrego al won
-                    if (game.get("result")!=null){
-                        if ((boolean)((DBObject)game.get("result")).get("victory") == true){
-                            users.get(id).addWon();
+                    if (game.get("result")!=null && ((DBObject)game.get("result")).get("victory")!=null){
+                        if (((DBObject)game.get("result")).get("victory")!=null){
+                            if ((boolean)((DBObject)game.get("result")).get("victory") == true){
+                                users.get(aliases.get(alias)).addWon();
+                            }
                         }
-                    }
+                    
                     //agrego los puntos
                     //posible horror de casting
-                    if (game.get("result")!=null){
-                        users.get(id).addPoints((Integer)((DBObject)game.get("result")).get("score"));
-                    }
+                        if (((DBObject)game.get("result")).get("score")!=null){
+                            users.get(aliases.get(alias)).addPoints((Integer)((DBObject)game.get("result")).get("score"));
+                        }
+                    
+                             //me fijo a ver si el user sobrevivio o no
+                            if (!(boolean)((DBObject)game.get("result")).get("victory")){
+                                   users.get(aliases.get(alias)).addDeath();
+
+                            }
+                            else{
+                                //si hay data del estado final de los players
+                                if (((DBObject)game.get("result")).get("players")!=null){
+                                    BasicDBList dead = (BasicDBList)((DBObject)game.get("result")).get("players");
+                                    int i=0;
+                                    boolean found=false;
+                                    while(!found && i<dead.size()){
+                                        if (((BasicDBObject)dead.get(i)).get("alias").equals(aliases.get(alias))){
+                                            if ((boolean)((BasicDBObject)dead.get(i)).get("dead")){
+                                                users.get(aliases.get(alias)).addDeath();
+                                            }
+
+                                            found=true;
+                                        }
+                                        i++;
+                                    }
+
+                                }
+                                else{
+                                    analyzeDeaths=true;
+                                }
+                        }
+                }
+                    //no hay result o este esta trunco
+                    else{
+                        users.get(aliases.get(alias)).addDeath();
+                }
+                    
+                }
+                if (analyzeDeaths){
+                    //tengo que calcularla
+                                    //evalua cada accion de juego
+                                    
+                                    ArrayList<GameActionSchema> gameActions = game.getGameActions();
+                                    int j=0;
+                                    while (j<gameActions.size()){
+                                        LotRGameAction action = (LotRGameAction) gameActions.get(j);
+
+                                            //evaluar acción   
+                                            String actionName = (String) action.get("action");
+                                            if (actionName.equals("KillPlayer")){
+                                                users.get(aliases.get((String)((BasicDBObject)action.get("data")).get("alias"))).addDeath();
+                                            }
+                                        j++;
+                                    }
                 }
                 //cargo los chats de ese usuario
                 //recupero el chat correspondiente a la partida
@@ -885,6 +941,8 @@ public class MainWindow extends javax.swing.JFrame {
             this.consolePrint("\nUserID: "+p);
             this.consolePrint("Partidas jugadas: "+users.get(p).getGames());
             this.consolePrint("Partidas ganadas: "+users.get(p).getWon());
+            this.consolePrint("Muertes: "+users.get(p).getDeaths());
+            this.consolePrint("Partidas sobrevividas: "+(users.get(p).getGames()-users.get(p).getDeaths()));
             this.consolePrint("Procentaje de victorias: "+ (double)users.get(p).getWon()/(double)users.get(p).getGames());
             this.consolePrint("Puntos obtenidos: "+users.get(p).getPoints());
             this.consolePrint("Promedio de puntos por partida: "+(double)users.get(p).getPoints()/(double)users.get(p).getGames());
@@ -897,6 +955,7 @@ public class MainWindow extends javax.swing.JFrame {
             document.put("won", users.get(p).getWon());
             document.put("points", users.get(p).getPoints());
             document.put("chats", users.get(p).getChats()); 
+            document.put("survives", users.get(p).getGames()-users.get(p).getDeaths());
             db.updateStats(p, document);
             
         }

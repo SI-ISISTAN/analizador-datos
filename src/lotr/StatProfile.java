@@ -14,12 +14,14 @@ public class StatProfile {
     private int won;
     private int points;
     private int chats;
+    private int deaths;
     
     public StatProfile(){
         games=0;
         won=0;
         points=0;
         chats=0;
+        deaths=0;
     }
 
     public int getGames() {
@@ -74,6 +76,17 @@ public class StatProfile {
     public String toString() {
         return "StatProfile{" + "games=" + games + ", won=" + won + ", points=" + points + ", chats=" + chats + '}';
     }
+
+    public int getDeaths() {
+        return this.deaths;
+    }
+
+    public void setDeaths(int s) {
+        this.deaths = s;
+    }
      
+    public void addDeath(){
+        this.deaths++;
+    }
      
 }
