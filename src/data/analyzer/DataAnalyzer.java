@@ -10,6 +10,7 @@ import org.json.simple.JSONObject;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import lotr.LotRGame;
 /**
  *
  * @author matias
@@ -33,14 +34,31 @@ public class DataAnalyzer {
        return dataInput.getGamesForUser(keyAttribute);
     }
     
-    public ArrayList<GameSchema> getUnanalizedGames(){
+    public ArrayList<GameSchema> getUnanalizedGames(String filter){
+        
        ArrayList<GameSchema> allGames = dataInput.getGames();
        ArrayList<GameSchema> unanalyzed = new ArrayList();
        for (GameSchema game: allGames){
            //cast json boolean to string for comparison
-          if (!game.isAnalyzed()){
-              unanalyzed.add(game);
-          }
+           if (filter==null){
+                if (!game.isAnalyzed()){
+                    unanalyzed.add(game);
+                }
+           }
+           else{
+               //si hay filtro por config chequeo que tenga esa config
+               LotRGame g = (LotRGame)game;
+               if (g.get("configName")!=null){
+                   System.out.println("Filter "+filter);
+                   System.out.println("Config "+(String)g.get("configName"));
+                   if (filter.equals((String)g.get("configName"))){
+                       System.out.println("DIO TRUE");
+                       if (!game.isAnalyzed()){
+                            unanalyzed.add(game);
+                        }
+                   }
+               }
+           }
        }
        return unanalyzed;
     }
