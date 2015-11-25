@@ -665,9 +665,11 @@ public class LotRModel extends Model{
                         double s3= (Double)((DBObject)user.get("symlog")).get("forward_backward");
 
                         double distance = ((e1*s1)+(e2*s2)+(e3*s3)) / ( Math.sqrt(Math.pow(e1,2)+Math.pow(e2,2)+Math.pow(e3,2)) * Math.sqrt(Math.pow(s1,2)+Math.pow(s2,2)+Math.pow(s3,2))) ;
-                        distanceSum+=distance;
-                        distances.add(distance);
-                        analyzed++;
+                        if (!Double.isNaN(distance)){
+                            distanceSum+=distance;
+                            distances.add(distance);
+                            analyzed++;
+                        }
                     }
                 }
             }
